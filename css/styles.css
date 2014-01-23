@@ -1,0 +1,22 @@
+html{
+    height:100%;
+}
+
+body{
+    position:absolute;
+    margin:20px;
+    bottom:0px;
+    top:0px;
+    left:0px;
+    right:0px;
+}
+
+svg#fieldContainer{
+    border:1px solid lightGrey;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+  stroke:salmon;
+}
