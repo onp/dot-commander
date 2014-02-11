@@ -13,10 +13,12 @@ body{
 
 svg#fieldContainer{
     border:1px solid lightGrey;
+    background-color:black;
 }
 
 .overlay {
-  fill: none;
+  fill: green;
   pointer-events: all;
   stroke:salmon;
+  
 }
