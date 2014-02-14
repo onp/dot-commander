@@ -35,9 +35,9 @@ $(function () {
         mat3.translate(tm,tm,translateVec)
         mat3.scale(tm,tm,[scaleFactor,scaleFactor])
         if (zpOrigin.fieldCenter !== undefined){
-            mat3.translate(tm,tm,zpOrigin.fieldCenter)
+            //mat3.translate(tm,tm,zpOrigin.fieldCenter)
             mat3.rotate(tm,tm,-rotateRad)
-            mat3.translate(tm,tm,vec2.negate([],zpOrigin.fieldCenter))
+            //mat3.translate(tm,tm,vec2.negate([],zpOrigin.fieldCenter))
         } else {
             mat3.rotate(tm,tm,-rotateRad)
         }
@@ -109,8 +109,6 @@ $(function () {
         })
         .append("g");
 
-   // var workingPoint = fieldContainer[0][0].createSVGPoint();
-
     playingfield = fieldContainer.append("rect")
         .attr("class", "overlay")
         .attr("width", widthF)
@@ -153,12 +151,13 @@ $(function () {
         td.fieldDist = Math.sqrt(fdx * fdx + fdy * fdy);
         td.rad = Math.atan(sdx / sdy) + Math.PI * flipped;
 
-        //$("#overlay-interface").html( 
-        //    "t1:" + screenPoints[0][0] + ',' + screenPoints[0][1] + 
-        //    "  t2:" + screenPoints[1][0] + ',' + screenPoints[1][1] + 
-        //    '  ' + flipped + "  "+Math.round(td.rad*180/Math.PI)+
-        //    "<br>" + translateVec + '   ' + Math.round(scaleFactor) + '   ' +Math.round(rotateRad*180/Math.PI)
-        //);
+        // $("#overlay-interface").html( 
+            // "t1:" + screenPoints[0][0] + ',' + screenPoints[0][1] + 
+            // "  t2:" + screenPoints[1][0] + ',' + screenPoints[1][1] + 
+            // '  ' + flipped + "  "+Math.round(td.rad*180/Math.PI)+
+            // "<br>" + translateVec + '   ' + Math.round(scaleFactor) + '   ' +Math.round(rotateRad*180/Math.PI)+
+            // "<br>" +Math.round(zpOrigin.rotateOffset*180/Math.PI)
+        // );
         return td;
     };
 
@@ -166,6 +165,11 @@ $(function () {
         //must be called by a touch event
         mat3.copy(tmo,tm)
         var transBase = processTouchPair();
+        // $("#overlay-interface").html( 
+            // Math.round(translateVec[0]) + '   ' + Math.round(translateVec[1]) +
+            // '<br>' + Math.round(transBase.screenCenter[0]) + '   ' + Math.round(transBase.screenCenter[1])
+        // )
+        transBase.transVecO = translateVec.slice()
         transBase.translateOffset = [translateVec[0] - transBase.screenCenter[0], translateVec[1] - transBase.screenCenter[1]];
         transBase.scaleCoeff = scaleFactor / transBase.screenDist;
         transBase.rotateOffset = rotateRad - transBase.rad;
@@ -186,10 +190,13 @@ $(function () {
         touchStartMarkers
             .attr("cx", function (d) {return d[0]; })
             .attr("cy", function (d) {return d[1]; });
-            
+        
+        var tsmfDat = transBase.screenXY.slice()
+        tsmfDat.push(translateVec)
+        tsmfDat.push(transBase.screenCenter)
         var touchStartMarkersF = d3.select("svg#fieldContainer")
                           .selectAll("circle.tsmf")
-                          .data(transBase.screenXY);
+                          .data(tsmfDat);
         touchStartMarkersF.exit().remove();
         touchStartMarkersF.enter().append("circle")
             .attr("r", 16)
@@ -230,12 +237,29 @@ $(function () {
         d3.event.preventDefault();
         if (d3.event.touches.length === 2) {
             var newTouches = processTouchPair();
-            translateVec[0] = zpOrigin.translateOffset[0] * (newTouches.screenDist / zpOrigin.screenDist) + newTouches.screenCenter[0];
-            translateVec[1] = zpOrigin.translateOffset[1] * (newTouches.screenDist / zpOrigin.screenDist) + newTouches.screenCenter[1];
-            scaleFactor = zpOrigin.scaleCoeff * newTouches.screenDist;
             rotateRad = zpOrigin.rotateOffset + newTouches.rad;
-            updateTransform();
+            scaleFactor = zpOrigin.scaleCoeff * newTouches.screenDist;
+            var rtr = mat3.create()
+            mat3.translate(rtr,rtr,zpOrigin.fieldCenter)
+            mat3.rotate(rtr,rtr,rotateRad)
+            mat3.translate(rtr,rtr,vec2.negate([],zpOrigin.fieldCenter))
+            mat3.invert(rtr,rtr)
+            translateVec[0] = zpOrigin.translateOffset[0] * (newTouches.screenDist / zpOrigin.screenDist) 
+                    + newTouches.screenCenter[0]
+                    + rtr[6]*scaleFactor;
+            translateVec[1] = zpOrigin.translateOffset[1] * (newTouches.screenDist / zpOrigin.screenDist) 
+                    + newTouches.screenCenter[1]
+                    + rtr[7]*scaleFactor;
+
             
+            $("#overlay-interface").html( 
+                //(zpOrigin.fieldCenter[0]*(1-Math.cos(rotateRad)) + zpOrigin.fieldCenter[1]*Math.sin(rotateRad))
+                (rtr[6])
+                + ' <br> '
+                //+ (zpOrigin.fieldCenter[1]*(1-Math.cos(rotateRad)) - zpOrigin.fieldCenter[0]*Math.sin(rotateRad))
+                +(rtr[7])
+            )
+            updateTransform();
             
             //translateVec[0] = (newTouches.screenCenter[0] - zpOrigin.screenCenter[0]) +(1-scaleFactor)*zpOrigin.fieldCenter[0];
             //translateVec[1] = (newTouches.screenCenter[1] - zpOrigin.screenCenter[1]) +(1-scaleFactor)*//zpOrigin.fieldCenter[1];
@@ -255,6 +279,22 @@ $(function () {
                 .attr("fill", "red");
             touchMarkers.attr("cx", function (d) {return d[0]; })
                 .attr("cy", function (d) {return d[1]; });
+                
+        var trmDat = [newTouches.screenCenter]
+        trmDat.push([newTouches.screenCenter[0]+zpOrigin.translateOffset[0] * (newTouches.screenDist / zpOrigin.screenDist),newTouches.screenCenter[1]+zpOrigin.translateOffset[1] * (newTouches.screenDist / zpOrigin.screenDist)])
+        trmDat.push([trmDat[1][0]+rtr[6]*scaleFactor,trmDat[1][1]+rtr[7]*scaleFactor])
+        //trmDat.push(zpOrigin.screenCenter)
+        var transMarkers = d3.select("svg#fieldContainer")
+                          .selectAll("circle.trm")
+                          .data(trmDat);
+        transMarkers.exit().remove();
+        transMarkers.enter().append("circle")
+            .attr("r", 20)
+            .attr("class", "trm")
+            .attr("fill", "blueviolet");
+        transMarkers
+            .attr("cx", function (d) {return d[0]; })
+            .attr("cy", function (d) {return d[1]; });
         }
     });
 
