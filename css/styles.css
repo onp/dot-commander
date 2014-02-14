@@ -4,7 +4,7 @@ html{
 
 body{
     position:absolute;
-    margin:20px;
+    margin:0px;
     bottom:0px;
     top:0px;
     left:0px;
@@ -21,4 +21,14 @@ svg#fieldContainer{
   pointer-events: all;
   stroke:salmon;
   
+}
+
+#overlay-interface{
+    position:fixed;
+    color:red;
+    width:300px;
+    height:300px;
+    top:0px;
+    right:0px;
+    pointer-events:none;
 }
